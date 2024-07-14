@@ -1,3 +1,6 @@
+import mongoDb from 'mongodb'
+const ObjectId = mongoDb.ObjectId
+
 let movies
 
 export default class MoviesDAO {
@@ -12,6 +15,7 @@ export default class MoviesDAO {
             console.error(`unable to connect in MoviesDAO: ${e}`)
         }
     }
+
     static async getMovies({
         filters=null,
         page=0,
@@ -36,6 +40,40 @@ export default class MoviesDAO {
         catch(e){
             console.error(`Unable to issue find command, ${e}`)
             return {moviesList: [], totalNumMovies: 0}
+        }
+    }
+
+    static async getRatings() {
+        let ratings = []
+        try {
+            ratings = await movies.distinct("rated")
+            return ratings
+        } catch (e) {
+            console.log(`unable to get ratings, ${e}`)
+            return ratings
+        }
+    }
+
+    static async getMovieById(id) {
+        try {
+            return await movies.aggregate([
+                {
+                    $match: {
+                        _id: new ObjectId(id)
+                    }
+                },
+                {$lookup:
+                    {
+                        from: 'reviews',
+                        localField: '_id',
+                        foreignField: 'movie_id',
+                        as: 'reviews',
+                    }
+                }
+            ]).next()
+        } catch (e) {
+            console.error(`something went wrong in getMovieById: ${e}`)
+            throw e
         }
     }
 }
